@@ -14,12 +14,13 @@ class Trainer:
     def train(self, epoch, train_loader):
         print("\nStarting Training... \n" + "-" * 40)
         self.model.train()
-        train_loss = []
+        train_loss_list = []
         for epoch in range(0, epoch + 1):
-            train_loss_list = self.training_step(train_loader)
-            print(f'[EPOCH: {epoch}] \nTrain Loss: {np.mean(train_loss_list):.5f}\n')
-            train_loss.append(np.mean(train_loss_list))
-        return train_loss
+            train_loss = self.training_step(train_loader)
+            epoch_loss = np.mean(train_loss)
+            print(f'[EPOCH: {epoch}] \nTrain Loss: {epoch_loss:.5f}\n')
+            train_loss_list.append(epoch_loss)
+        return train_loss_list
 
     def training_step(self, train_loader):
         train_loss_list = []

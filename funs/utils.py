@@ -9,6 +9,8 @@ import random
 import torch
 
 import argparse
+import matplotlib.pyplot as plt
+import os
 
 def load_yaml(config_path: str) -> Box:
     """
@@ -67,3 +69,20 @@ def parse_arguments():
     args = parser.parse_args()
 
     return args
+
+def plot_loss_curves(loss_list, title, save_path='./log/loss_plot.png'):
+    # 디렉토리 없으면 생성
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+
+    plt.figure(figsize=(10, 6))
+    
+    plt.plot(loss_list)
+
+    plt.ylabel('Loss')
+    plt.title(title)
+    plt.grid(True)
+    plt.tight_layout()
+
+    # 그림 저장
+    plt.savefig(save_path)
+    plt.close()

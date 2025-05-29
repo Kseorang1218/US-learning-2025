@@ -57,6 +57,10 @@ def main(config):
     eval_loss_list = trainer.eval(val_loader)
     test_loss_list = trainer.eval(test_loader)
 
+    funs.plot_loss_curves(train_loss_list, "Train loss", f'{config.fig_root}/train_loss.png')
+    funs.plot_loss_curves(eval_loss_list, "Val loss", f'{config.fig_root}/val_loss.png')
+    funs.plot_loss_curves(test_loss_list, "Test loss", f'{config.fig_root}/test_loss.png')
+
 if __name__=='__main__':
     config = funs.load_yaml('./config.yaml')
 
