@@ -1,1 +1,13 @@
+# data dir
 data/
+
+# virtualenv dir
+us/
+
+# log dir
+log/
+
+# saved model(.pt file) dir
+model/
+
+__pycache__/
