@@ -3,6 +3,7 @@
 import numpy as np
 import torch
 import os 
+from sklearn.metrics import roc_auc_score
 
 class Trainer:
     def __init__(self, model, loss, optimizer, device):
@@ -41,13 +42,19 @@ class Trainer:
     def eval(self, eval_loader):
         print("\nStarting Evaluation... \n" + "-" * 40)
         self.model.eval()
-        eval_loss = self.validation_step(eval_loader)
+        eval_loss, auc_dic = self.validation_step(eval_loader)
         print(f'Validation Loss: {np.mean(eval_loss):.5f}')
+        for fault, auc in auc_dic.items():
+            print(f'{fault} AUC \t{auc:.5f}')
 
-        return eval_loss
+        return eval_loss, auc_dic
 
     def validation_step(self, eval_loader):
         eval_loss_list = []
+
+        y_true = []
+        y_pred = []
+        fault_label_list=[]
 
         with torch.no_grad():
             for batch_idx, (data, label) in enumerate(eval_loader):
@@ -57,11 +64,38 @@ class Trainer:
                 recon, mu, logvar = self.model(x)
                 loss = self.loss(recon, x, mu, logvar)
 
-                eval_loss_list.append(loss.item())
+                eval_loss_list.append(loss.sum().item())
 
-        return eval_loss_list
+                y_true.extend((label > 0).int().tolist())
+                y_pred.extend(loss.tolist())
+                fault_label_list.extend(label.int().tolist())
+            
+            auc_dic = self.compute_auc(y_true, y_pred, fault_label_list)
+
+        return eval_loss_list, auc_dic
     
+    def compute_auc(self, y_true, y_pred, fault_label_list):
+        fault_types = ['normal', 'fan', 'pump', 'slider', 'valve']
+
+        auc_dic = {}
+        auc_dic['Total'] = roc_auc_score(y_true, y_pred)
+
+        for fault in fault_types:
+            if fault == "normal":
+                continue
+            else:
+                fault_indices = [
+                    i
+                    for i, label in enumerate(fault_label_list)
+                    if (label == fault_types.index(fault) or label == 0)
+                ]
+                pred_labels = [y_pred[i] for i in fault_indices]
+                true_labels = [y_true[i] for i in fault_indices]
+                fault_auc = roc_auc_score(true_labels, pred_labels)
+                auc_dic[fault] = fault_auc
+        
+        return auc_dic
+
     def save(self, root, model_name):
         os.makedirs(f'{root}/', exist_ok=True)
-
         torch.save(self.model.state_dict(), f'{root}/{model_name}.pt')

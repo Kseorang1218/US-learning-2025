@@ -44,22 +44,20 @@ def main(config):
 
     model = funs.VAE(input_dim=config.sample_size, latent_dim=32).to(device)
     optimizer = Adam(model.parameters(), lr = float(config.learning_rate))
-    loss = funs.Loss()
+    loss = funs.VAELoss(reduction='sum')
 
     # train 
     trainer = funs.Trainer(model, loss, optimizer, device)
     train_loss_list = trainer.train(config.epoch, train_loader)
     trainer.save(config.model_root, model_name='vae')
 
+    loss = funs.VAELoss(reduction='none')
+    trainer = funs.Trainer(model, loss, optimizer, device)
     model_path = f'{config.model_root}/vae.pt'
     trainer.model.load_state_dict(torch.load(model_path, weights_only=True))
 
-    eval_loss_list = trainer.eval(val_loader)
-    test_loss_list = trainer.eval(test_loader)
-
-    funs.plot_loss_curves(train_loss_list, "Train loss", f'{config.fig_root}/train_loss.png')
-    funs.plot_loss_curves(eval_loss_list, "Val loss", f'{config.fig_root}/val_loss.png')
-    funs.plot_loss_curves(test_loss_list, "Test loss", f'{config.fig_root}/test_loss.png')
+    eval_loss_list, eval_auc_dic = trainer.eval(val_loader)
+    test_loss_list, test_auc_dic = trainer.eval(test_loader)
 
 if __name__=='__main__':
     config = funs.load_yaml('./config.yaml')
