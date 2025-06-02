@@ -6,6 +6,7 @@ import numpy as np
 import librosa
 from box import Box
 from typing import List, Tuple
+import torch
 
 def make_dataframe(config: Box, dirs: List):
     df = {}
@@ -14,6 +15,7 @@ def make_dataframe(config: Box, dirs: List):
     df['machinetype'] = []
     df['modelID'] = []
     df['label'] = []
+    df['stft'] = []
 
     label_map = {
         ("fan", "normal"): 0,
@@ -36,6 +38,12 @@ def make_dataframe(config: Box, dirs: List):
 
                 data, sample_rate = librosa.load(file, sr=config.sr)
                 df["path"].append(filepath)
+
+                D = librosa.stft(data, n_fft=512, hop_length=256, win_length=512)
+                magnitude = np.abs(D)
+                magnitude = torch.tensor(magnitude, dtype=torch.float32).unsqueeze(0)
+                df['stft'].append(magnitude)
+                # log_mag = librosa.amplitude_to_db(magnitude, ref=np.max)
 
                 filepath_parts = filepath.split('/')
                 model_id = int(filepath_parts[-1].split('_')[2])
