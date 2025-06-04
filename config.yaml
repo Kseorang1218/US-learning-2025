@@ -20,6 +20,7 @@ overlap: 2048
 batch_size: 128
 learning_rate: 1e-3
 
+# for beta VAE
 beta:
   - 0.5
   - 1.0

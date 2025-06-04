@@ -8,6 +8,6 @@ us/
 log/
 
 # saved model(.pt file) dir
-model/
+model_pt/
 
 __pycache__/

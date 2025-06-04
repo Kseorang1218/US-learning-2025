@@ -3,10 +3,13 @@ import funs
 import torch
 import os
 
+import gc
+import numpy as np
 from torch.optim import Adam
 
 def main(config):
     # Initialize
+    model_name = f'stft_vae'
     funs.set_seed(config.seed)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print('device =', device)
@@ -29,9 +32,41 @@ def main(config):
     test_df = funs.make_dataframe(config, test_dirs)
 
     # make data, label
-    train_data, train_label = funs.get_data_label_arrays(train_df, config.sample_size, config.overlap)
-    val_data, val_label= funs.get_data_label_arrays(val_df, config.sample_size, config.overlap)
-    test_data, test_label  = funs.get_data_label_arrays(test_df, config.sample_size, config.overlap)
+    data_list = []
+    label_list = []
+    for _, row in train_df.iterrows():
+        segments = row['stft']
+        label = row['label']
+        
+        for seg in segments:
+            data_list.append(seg)        
+            label_list.append(label)
+
+    train_data, train_label = np.array(data_list), np.array(label_list)
+    
+    data_list = []
+    label_list = []
+    for _, row in val_df.iterrows():
+        segments = row['stft']
+        label = row['label']
+        
+        for seg in segments:
+            data_list.append(seg)        
+            label_list.append(label)
+
+    val_data, val_label = np.array(data_list), np.array(label_list)
+
+    data_list = []
+    label_list = []
+    for _, row in test_df.iterrows():
+        segments = row['stft']
+        label = row['label']
+        
+        for seg in segments:
+            data_list.append(seg)        
+            label_list.append(label)
+
+    test_data, test_label = np.array(data_list), np.array(label_list)
 
     # make dataset and dataloader
     train_dataset = funs.MIMIIDataset(train_data, train_label)
@@ -42,18 +77,18 @@ def main(config):
     val_loader = funs.get_dataloader(val_dataset, config.batch_size, shuffle = False)
     test_loader = funs.get_dataloader(test_dataset, config.batch_size, shuffle = False)
 
-    model = funs.VAE(input_dim=config.sample_size, latent_dim=32).to(device)
+    model = funs.Conv2DVAE(latent_dim=32).to(device)
     optimizer = Adam(model.parameters(), lr = float(config.learning_rate))
-    loss = funs.VAELoss(reduction='sum')
+    loss = funs.VAELoss()
 
     # train 
     trainer = funs.Trainer(model, loss, optimizer, device)
     train_loss_list = trainer.train(config.epoch, train_loader)
-    trainer.save(config.model_root, model_name='vae')
+    trainer.save(config.model_root, model_name=model_name)
 
     loss = funs.VAELoss(reduction='none')
     trainer = funs.Trainer(model, loss, optimizer, device)
-    model_path = f'{config.model_root}/vae.pt'
+    model_path = f'{config.model_root}/{model_name}.pt'
     trainer.model.load_state_dict(torch.load(model_path, weights_only=True))
 
     eval_loss_list, eval_auc_dic = trainer.eval(val_loader)
